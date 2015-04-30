@@ -1,8 +1,8 @@
 FROM gliderlabs/alpine
 
-MAINTAINER Steven Borrelli <steve@aster.is>
+MAINTAINER identakid.com <ccssdev@identakid.com>
 
-ENV CONSUL_TEMPLATE_VERSION=0.8.0
+ENV CONSUL_TEMPLATE_VERSION=0.9.0
 
 RUN apk-install bash haproxy
 

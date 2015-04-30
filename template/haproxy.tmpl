@@ -1,24 +1,29 @@
 global
     maxconn 256
     debug
-
+    log 127.0.0.1 local0
+    log 127.0.0.1 local1 notice
 defaults
-    mode http
+    mode tcp
     timeout connect 5000ms
     timeout client 50000ms
     timeout server 50000ms
 
-frontend www
+frontend http
     bind *:80
+    mode http
+    option http-server-close
+{{ range services }}{{ if .Name | regexMatch "http" }}
+    acl url_{{ .Name }} path_beg /{{ .Name | replaceAll "-http" "" }}
+    use_backend {{ .Name }}_backend if url_{{ .Name }}
+{{ end }}{{ end }}
 
-    # Generated automatically by consul-template
-{{ range services }}
-    acl host_{{ .Name }} hdr(host) -i {{ .Name }}.{{ env "HAPROXY_DOMAIN" }} 
-    use_backend {{ .Name }}_backend if host_{{ .Name }}
-{{ end }}
-
-{{ range services }}
+{{ range services }}{{ if .Name | regexMatch "http" }}
 backend {{ .Name }}_backend
+   mode http
+   balance roundrobin
+   option httplog
+   reqrep ^([^\ :]*)\ /{{ .Name | replaceAll "-http" "" }}/(.*) \1\ /\2
 {{ range service .Name }}
    server {{ .Node }} {{ .Address }}:{{ .Port }}{{ end }}
-{{ end }}
+{{ end }}{{ end }}
