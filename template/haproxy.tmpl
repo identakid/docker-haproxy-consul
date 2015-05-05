@@ -1,29 +1,57 @@
+userlist all_users
+group gadmin users admin
+group guser users admin,user1,user2,rabbitmq,elasticsearch
+user admin insecure-password {{ env "USER_ADMIN_PW" }} 
+user user1 insecure-password {{ env "USER_USER1_PW" }}
+user user2 insecure-password {{ env "USER_USER2_PW" }}
+user rabbitmq insecure-password {{ env "USER_RABBITMQ_PW" }} 
+user elasticsearch insecure-password {{ env "USER_ELASTICSEARCH_PW" }}
+
 global
-    maxconn 256
+    maxconn {{ env "HAPROXY_MAX_CONN" }}
     debug
     log 127.0.0.1 local0
     log 127.0.0.1 local1 notice
 defaults
-    mode tcp
+    mode http
     timeout connect 5000ms
     timeout client 50000ms
     timeout server 50000ms
+    stats enable
+    stats uri /stats
+    stats realm Haproxy\ Statistics
+    option forwardfor       
+    option http-server-close                          
 
 frontend http
     bind *:80
-    mode http
-    option http-server-close
+    reqadd X-Forwarded-Proto:\ http
 {{ range services }}{{ if .Name | regexMatch "http" }}
     acl url_{{ .Name }} path_beg /{{ .Name | replaceAll "-http" "" }}
     use_backend {{ .Name }}_backend if url_{{ .Name }}
 {{ end }}{{ end }}
 
+frontend https
+    bind *:443 ssl crt /etc/ssl/private/{{ env "HAPROXY_DOMAIN" }}.pem
+    acl auth_user http_auth_group(all_users) guser
+    http-request auth if !auth_user
+
+    acl AuthOkay_Admin http_auth_group(all_users) gadmin
+    stats http-request auth realm HAProxy-Statistics
+    stats admin if AuthOkay_Admin
+    reqadd X-Forwarded-Proto:\ https
 {{ range services }}{{ if .Name | regexMatch "http" }}
-backend {{ .Name }}_backend
-   mode http
-   balance roundrobin
-   option httplog
-   reqrep ^([^\ :]*)\ /{{ .Name | replaceAll "-http" "" }}/(.*) \1\ /\2
-{{ range service .Name }}
-   server {{ .Node }} {{ .Address }}:{{ .Port }}{{ end }}
+    acl url_{{ .Name }} path_beg /{{ .Name | replaceAll "-http" "" }}
+    use_backend {{ .Name }}_backend if url_{{ .Name }}
 {{ end }}{{ end }}
+
+{{ range services }}{{ if .Name | regexMatch "http" }}                 
+backend {{ .Name }}_backend                                            
+   mode http                                                           
+   reqrep ^([^\ :]*)\ /{{ .Name | replaceAll "-http" "" }}/(.*) \1\ /\2
+   redirect scheme https if !{ ssl_fc }                                
+   balance roundrobin                                                  
+   option httplog                                                      
+{{ range service .Name }}                                              
+   server {{ .Node }} {{ .Address }}:{{ .Port }}{{ end }}
+{{ end }}{{ end }} 
