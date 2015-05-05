@@ -25,14 +25,14 @@ If you don't want to configure wildcard dns, you can use xip.io. In this example
 Start the container as follows:
 
 ```
-docker run --net=host --name=haproxy -d -e HAPROXY_DOMAIN=180.19.20.21.xip.io asteris/haproxy-consul
+docker run --net=host --name=haproxy -d -e HAPROXY_DOMAIN=180.19.20.21.xip.io identakid/haproxy-consul
 
 ```
 
 If you have wildcard DNS set up for your company (say at `*.mycompany.com`) use the following:
 
 ```
-docker run --net=host --name=haproxy -d -e HAPROXY_DOMAIN=mycompany.com asteris/haproxy-consul  
+docker run --net=host --name=haproxy -d -e HAPROXY_DOMAIN=mycompany.com identakid/haproxy-consul  
 ```
 
 Now that it is set up, connect to an app registered via consul. 
@@ -51,7 +51,7 @@ curl -L http://myapp.180.19.20.21.xip.io
 If you wish to override the config and template files, mount a volume and change the `CONSUL_CONFIG` environment variable upon launch. In docker this is via the `-e` option: 
 
 ```
-docker run -v /host/config:/my_config -e CONSUL_CONFIG=/my_config -net=host --name=haproxy -d -e HAPROXY_DOMAIN=mycompany.com asteris/haproxy-consul 
+docker run -v /host/config:/my_config -e CONSUL_CONFIG=/my_config -net=host --name=haproxy -d -e HAPROXY_DOMAIN=mycompany.com identakid/haproxy-consul 
 ```
 
 
